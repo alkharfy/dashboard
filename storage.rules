@@ -1,0 +1,25 @@
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isRole(r) { return request.auth.token.role == r; }
+    
+    function requesterHasTaskAccess(tid) {
+      return exists(/databases/$(database)/documents/tasks/$(tid))
+        && (
+          isRole('admin') || isRole('manager') ||
+          get(/databases/$(database)/documents/tasks/$(tid))
+            .data.assignedDesignerUid == request.auth.uid ||
+          get(/databases/$(database)/documents/tasks/$(tid))
+            .data.assignedReviewerUid == request.auth.uid
+        );
+    }
+
+    match /attachments/{taskId}/{file=**} {
+      allow read, write: if requesterHasTaskAccess(taskId);
+    }
+
+    match /avatars/{uid}/{file=**} {
+        allow read: if true;
+        allow write: if request.auth.uid == uid;
+    }
+  }
+}

@@ -21,7 +21,9 @@ export const translations = {
 
     // Login
     'loginAs': 'Login as',
-    'loginWelcome': 'Welcome to the Internal CV Management System',
+    'loginWelcome': 'Welcome back! Please log in.',
+    'login': 'Login',
+    'signup': 'Sign Up',
     
     // Navigation
     'dashboard': 'Dashboard',
@@ -141,7 +143,9 @@ export const translations = {
 
     // Login
     'loginAs': 'تسجيل الدخول كـ',
-    'loginWelcome': 'أهلاً بك في نظام إدارة السير الذاتية الداخلي',
+    'loginWelcome': 'أهلاً بعودتك! الرجاء تسجيل الدخول.',
+    'login': 'تسجيل الدخول',
+    'signup': 'إنشاء حساب',
     
     // Navigation
     'dashboard': 'لوحة المعلومات',
