@@ -42,10 +42,10 @@ export const createTask = functions.https.onCall(async (data, context) => {
         throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
-    // Check if the user has the 'Admin' role
+    // Check if the user has an allowed role
     const userRole = context.auth.token.role;
-    if (userRole !== 'Admin' && userRole !== 'Manager') {
-        throw new HttpsError('permission-denied', 'You must be an Admin or Manager to create a task.');
+    if (!['Admin', 'Manager', 'Designer'].includes(userRole)) {
+        throw new HttpsError('permission-denied', 'You do not have permission to create a task.');
     }
 
     // Basic validation (more robust validation should be added based on Zod schema)
