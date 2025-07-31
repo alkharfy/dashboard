@@ -41,6 +41,11 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 const formSchema = z.object({
   clientName: z.string().min(2),
@@ -66,6 +71,9 @@ const services = [
 
 export function TaskForm() {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const router = useRouter();
+  const { user } = useAuth();
 
   const serviceOptions = services.map(s => ({label: t(s.labelKey), value: s.value}));
 
@@ -86,9 +94,44 @@ export function TaskForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Here you would call the API to save the task
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "You must be logged in to create a task.",
+        });
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'tasks'), {
+            ...values,
+            status: 'Not Started',
+            createdAt: serverTimestamp(),
+            assignedDesignerUid: null, // Or assign a default designer
+            assignedReviewerUid: null, // Or assign a default reviewer
+            designerRating: null,
+            designerFeedback: '',
+            reviewerRating: null,
+            reviewerFeedback: '',
+            attachments: [], // Handle file uploads separately
+        });
+
+        toast({
+            title: "Task Created",
+            description: "The new task has been added successfully.",
+        });
+
+        router.push('/all-tasks');
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "There was a problem creating the task.",
+        });
+    }
   }
 
   return (
