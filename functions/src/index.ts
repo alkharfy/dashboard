@@ -42,14 +42,22 @@ export const createTask = functions.https.onCall(async (data, context) => {
         throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
+    // Check if the user has the 'Admin' role
+    const userRole = context.auth.token.role;
+    if (userRole !== 'Admin' && userRole !== 'Manager') {
+        throw new HttpsError('permission-denied', 'You must be an Admin or Manager to create a task.');
+    }
+
     // Basic validation (more robust validation should be added based on Zod schema)
-    if (!data.clientName || !data.services || data.services.length === 0) {
-        throw new HttpsError("invalid-argument", "The function must be called with a valid task payload.");
+    if (!data.clientName || !data.services || !Array.isArray(data.services) || data.services.length === 0) {
+        console.error("Validation failed for task data:", data);
+        throw new HttpsError("invalid-argument", "The function must be called with a valid task payload. Required fields: clientName, services.");
     }
 
     // Prepare data for Firestore
     const taskData = {
         ...data,
+        birthdate: data.birthdate ? new Date(data.birthdate) : null,
         status: "not_started",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -61,7 +69,7 @@ export const createTask = functions.https.onCall(async (data, context) => {
         console.log("Task created with ID: ", taskRef.id);
         return { status: "success", taskId: taskRef.id };
     } catch (error) {
-        console.error("Error creating task in Firestore:", error);
-        throw new HttpsError("internal", "Failed to create task.");
+        console.error("Error creating task in Firestore:", JSON.stringify(error, null, 2));
+        throw new HttpsError("internal", "Failed to create task in Firestore.");
     }
 });

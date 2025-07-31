@@ -75,7 +75,7 @@ const services = [
 ] as const;
 
 export function TaskForm() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
@@ -105,7 +105,7 @@ export function TaskForm() {
     if (!user) {
         toast({
             variant: "destructive",
-            title: "Authentication Error",
+            title: t('admin'), // Using a translated key for title
             description: "You must be logged in to create a task.",
         });
         return;
@@ -124,17 +124,26 @@ export function TaskForm() {
       const result = await createTask(payload);
 
       toast({
-          title: "Task Created",
-          description: "The new task has been added successfully.",
+          title: lang === 'ar' ? 'تم إنشاء المهمة' : 'Task Created',
+          description: lang === 'ar' ? 'تمت إضافة المهمة الجديدة بنجاح.' : 'The new task has been added successfully.',
       });
 
       router.push('/all-tasks');
     } catch (error: any) {
         console.error("Error creating task: ", error);
+        const title = lang === 'ar' ? 'خطأ' : 'Error';
+        let description = error.message || (lang === 'ar' ? 'حدثت مشكلة أثناء إنشاء المهمة.' : 'There was a problem creating the task.');
+        
+        if (error.code === 'functions/permission-denied') {
+            description = lang === 'ar' ? 'ليس لديك الصلاحية لإنشاء مهمة.' : 'You do not have permission to create a task.';
+        } else if (error.code === 'functions/invalid-argument') {
+            description = `${lang === 'ar' ? 'بيانات غير صالحة: ' : 'Invalid data: '} ${error.message}`;
+        }
+
         toast({
             variant: "destructive",
-            title: "Error",
-            description: error.message || "There was a problem creating the task.",
+            title: title,
+            description: description,
         });
     } finally {
         setIsSubmitting(false);

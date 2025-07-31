@@ -1,32 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
-    function isRole(r) { return request.auth.token.role == r; }
+    function isRole(r) { 
+      return request.auth.token.role == r; 
+    }
 
     match /users/{uid} {
-      allow read, update: if request.auth.uid == uid;
-      allow create: if true;
+      allow read, update: if request.auth.uid == uid || isRole('Admin');
+      allow create: if isRole('Admin'); // Or allow on signup
     }
 
     match /tasks/{tid} {
-      allow create: if isRole('admin');
-      allow read:   if isRole('admin') || isRole('manager')
-        || resource.data.assignedDesignerUid == request.auth.uid
-        || resource.data.assignedReviewerUid == request.auth.uid;
-      allow update: if isRole('admin')
-        || (isRole('designer')  && resource.data.assignedDesignerUid == request.auth.uid)
-        || (isRole('reviewer') && resource.data.assignedReviewerUid == request.auth.uid);
-      allow delete: if isRole('admin');
+      allow create: if isRole('Admin') || isRole('Manager');
+      
+      allow read:   if isRole('Admin') 
+                    || isRole('Manager')
+                    || (resource.data.assignedDesignerUid != null && resource.data.assignedDesignerUid == request.auth.uid)
+                    || (resource.data.assignedReviewerUid != null && resource.data.assignedReviewerUid == request.auth.uid);
+                    
+      allow update: if isRole('Admin')
+                    || (isRole('Designer') && resource.data.assignedDesignerUid == request.auth.uid)
+                    || (isRole('Reviewer') && resource.data.assignedReviewerUid == request.auth.uid);
+
+      allow delete: if isRole('Admin');
     }
 
     match /accounts/{id} {
-      allow read:  if isRole('admin') || isRole('manager');
-      allow write: if isRole('admin');
-    }
-
-    match /activity/{id} {
-        allow read: if isRole('admin') || isRole('manager');
-        allow create: if true;
+      allow read:  if isRole('Admin') || isRole('Manager');
+      allow write: if isRole('Admin');
     }
   }
 }
