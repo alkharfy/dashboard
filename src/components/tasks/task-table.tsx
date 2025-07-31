@@ -41,12 +41,11 @@ type TaskTableProps = {
 };
 
 const statusVariants: { [key: string]: 'default' | 'secondary' | 'outline' | 'destructive' } = {
-  Completed: 'default',
-  'In Review': 'secondary',
-  'In Progress': 'outline',
-  'Not Started': 'destructive',
+  completed: 'default',
+  in_review: 'secondary',
+  in_progress: 'outline',
+  not_started: 'destructive',
 };
-
 
 export function TaskTable({ tasks, userRole }: TaskTableProps) {
   const { t } = useLanguage();
@@ -54,10 +53,10 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
   const [statusFilter, setStatusFilter] = useState('All');
   
   const statusTranslations: { [key: string]: string } = {
-    'Not Started': t('notStarted'),
-    'In Progress': t('inProgress'),
-    'In Review': t('inReview'),
-    'Completed': t('completed'),
+    'not_started': t('not_started'),
+    'in_progress': t('in_progress'),
+    'in_review': t('in_review'),
+    'completed': t('completed'),
   };
 
   const filteredTasks = useMemo(() => {
@@ -88,7 +87,7 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
                     <SelectContent>
                         <SelectItem value="All">{t('allStatuses')}</SelectItem>
                         {Object.keys(statusVariants).map(status => (
-                            <SelectItem key={status} value={status}>{statusTranslations[status]}</SelectItem>
+                            <SelectItem key={status} value={status}>{statusTranslations[status as keyof typeof statusTranslations]}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -104,7 +103,8 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
             <TableRow>
               <TableHead>{t('clientName')}</TableHead>
               <TableHead>{t('task')}</TableHead>
-              {showAssignee && <TableHead>{t('assignee')}</TableHead>}
+              {showAssignee && <TableHead>{t('designer')}</TableHead>}
+              {showAssignee && <TableHead>{t('reviewer')}</TableHead>}
               <TableHead>{t('status')}</TableHead>
               <TableHead>{t('date')}</TableHead>
               <TableHead>{t('rating')}</TableHead>
@@ -118,13 +118,14 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
               <TableRow key={task.id}>
                 <TableCell className="font-medium">{task.clientName}</TableCell>
                 <TableCell>{task.services.join(', ')}</TableCell>
-                {showAssignee && <TableCell>{task.assignee || 'Unassigned'}</TableCell>}
+                {showAssignee && <TableCell>{task.designerId || 'Unassigned'}</TableCell>}
+                {showAssignee && <TableCell>{task.reviewerId || 'Unassigned'}</TableCell>}
                 <TableCell>
-                  <Badge variant={statusVariants[task.status]}>{statusTranslations[task.status]}</Badge>
+                  <Badge variant={statusVariants[task.status]}>{statusTranslations[task.status as keyof typeof statusTranslations]}</Badge>
                 </TableCell>
                 <TableCell>{task.createdAt ? format(task.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A'}</TableCell>
                 <TableCell>
-                  {task.rating ? <StarRating value={task.rating} readOnly /> : <span className="text-muted-foreground">{t('notRatedYet')}</span>}
+                  {task.designerRating ? <StarRating value={task.designerRating} readOnly /> : <span className="text-muted-foreground">{t('notRatedYet')}</span>}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -144,7 +145,7 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={showAssignee ? 7 : 6} className="h-24 text-center">
+                <TableCell colSpan={showAssignee ? 8 : 6} className="h-24 text-center">
                   {t('noData')}
                 </TableCell>
               </TableRow>

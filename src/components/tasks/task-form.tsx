@@ -41,26 +41,30 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db, functions } from "@/lib/firebase";
+import { httpsCallable } from 'firebase/functions';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 
 const formSchema = z.object({
-  clientName: z.string().min(2),
+  clientName: z.string().min(2, "Client name is required"),
   birthdate: z.date().optional(),
-  contactInfo: z.string(),
+  contactInfo: z.object({
+      phone: z.string().optional(),
+      email: z.string().email("Invalid email format").optional(),
+  }),
   address: z.string().optional(),
-  jobTitle: z.string(),
-  education: z.string(),
-  experience: z.coerce.number().min(0),
-  skills: z.string(),
-  services: z.array(z.string()).min(1),
+  jobTitle: z.string().min(1, "Job title is required"),
+  education: z.string().min(1, "Education is required"),
+  experienceYears: z.coerce.number().min(0),
+  skills: z.string().min(1, "Please list at least one skill."),
+  services: z.array(z.string()).min(1, "Please select at least one service."),
   designerNotes: z.string().optional(),
   reviewerNotes: z.string().optional(),
-  paymentStatus: z.enum(["Paid", "Unpaid", "Pending"]),
-  attachments: z.any().optional(),
+  paymentMethod: z.enum(["instapay", "paysky", "other"]),
+  paymentStatus: z.enum(["paid", "unpaid", "pending"]),
+  attachments: z.any().optional(), // File uploads handled separately
 });
 
 const services = [
@@ -74,6 +78,7 @@ export function TaskForm() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const serviceOptions = services.map(s => ({label: t(s.labelKey), value: s.value}));
 
@@ -81,16 +86,17 @@ export function TaskForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientName: "",
-      contactInfo: "",
+      contactInfo: { phone: "", email: "" },
       address: "",
       jobTitle: "",
       education: "",
-      experience: 0,
+      experienceYears: 0,
       skills: "",
       services: [],
       designerNotes: "",
       reviewerNotes: "",
-      paymentStatus: "Unpaid",
+      paymentMethod: "instapay",
+      paymentStatus: "unpaid",
     },
   });
 
@@ -103,35 +109,34 @@ export function TaskForm() {
         });
         return;
     }
+    setIsSubmitting(true);
 
     try {
-        await addDoc(collection(db, 'tasks'), {
-            ...values,
-            birthdate: values.birthdate || null,
-            status: 'Not Started',
-            createdAt: serverTimestamp(),
-            assignedDesignerUid: null, // Or assign a default designer
-            assignedReviewerUid: null, // Or assign a default reviewer
-            designerRating: null,
-            designerFeedback: '',
-            reviewerRating: null,
-            reviewerFeedback: '',
-            attachments: [], // Handle file uploads separately
-        });
+      const createTask = httpsCallable(functions, 'createTask');
+      // The skills are a comma-separated string, let's turn them into an array
+      const payload = {
+          ...values,
+          skills: values.skills.split(',').map(s => s.trim()).filter(Boolean),
+          birthdate: values.birthdate ? values.birthdate.toISOString() : null, // Send as ISO string
+      };
+      
+      const result = await createTask(payload);
 
-        toast({
-            title: "Task Created",
-            description: "The new task has been added successfully.",
-        });
+      toast({
+          title: "Task Created",
+          description: "The new task has been added successfully.",
+      });
 
-        router.push('/all-tasks');
-    } catch (error) {
-        console.error("Error adding document: ", error);
+      router.push('/all-tasks');
+    } catch (error: any) {
+        console.error("Error creating task: ", error);
         toast({
             variant: "destructive",
             title: "Error",
-            description: "There was a problem creating the task.",
+            description: error.message || "There was a problem creating the task.",
         });
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -180,10 +185,17 @@ export function TaskForm() {
                          <FormMessage />
                        </FormItem>
                     )} />
-                     <FormField control={form.control} name="contactInfo" render={({ field }) => (
+                     <FormField control={form.control} name="contactInfo.email" render={({ field }) => (
                         <FormItem>
-                        <FormLabel>{t('contactInfo')}</FormLabel>
-                        <FormControl><Textarea placeholder={t('phoneEmail')} {...field} /></FormControl>
+                        <FormLabel>{t('email')}</FormLabel>
+                        <FormControl><Input placeholder="client@example.com" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="contactInfo.phone" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>{t('phone')}</FormLabel>
+                        <FormControl><Input placeholder="+123456789" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )} />
@@ -208,11 +220,11 @@ export function TaskForm() {
                     <FormField control={form.control} name="education" render={({ field }) => (
                         <FormItem><FormLabel>{t('education')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="experience" render={({ field }) => (
+                    <FormField control={form.control} name="experienceYears" render={({ field }) => (
                         <FormItem><FormLabel>{t('yearsOfExperience')}</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                      <FormField control={form.control} name="skills" render={({ field }) => (
-                        <FormItem><FormLabel>{t('skills')}</FormLabel><FormControl><Input placeholder={t('skillsPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('skills')}</FormLabel><FormControl><Input placeholder={t('skillsPlaceholder')} {...field} /></FormControl><FormDescription>Enter skills separated by commas.</FormDescription><FormMessage /></FormItem>
                     )} />
                 </CardContent>
             </Card>
@@ -290,15 +302,29 @@ export function TaskForm() {
                     )} />
                 </div>
                 <div className="space-y-4">
+                    <FormField control={form.control} name="paymentMethod" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>{t('paymentMethod')}</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="instapay">Instapay</SelectItem>
+                                    <SelectItem value="paysky">PaySky</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                     <FormField control={form.control} name="paymentStatus" render={({ field }) => (
                         <FormItem>
                             <FormLabel>{t('paymentStatus')}</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select a payment status" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="Paid">{t('paid')}</SelectItem>
-                                    <SelectItem value="Unpaid">{t('unpaid')}</SelectItem>
-                                    <SelectItem value="Pending">{t('pending')}</SelectItem>
+                                    <SelectItem value="paid">{t('paid')}</SelectItem>
+                                    <SelectItem value="unpaid">{t('unpaid')}</SelectItem>
+                                    <SelectItem value="pending">{t('pending')}</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -310,6 +336,9 @@ export function TaskForm() {
                             <FormControl>
                                 <Input type="file" multiple {...form.register('attachments')} />
                             </FormControl>
+                             <FormDescription>
+                                You can upload attachments after creating the task.
+                            </FormDescription>
                             <FormMessage />
                         </FormItem>
                     )} />
@@ -318,7 +347,7 @@ export function TaskForm() {
         </Card>
 
         <div className="flex justify-end">
-            <Button type="submit">{t('addTask')}</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('addTask')}</Button>
         </div>
       </form>
     </Form>

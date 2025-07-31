@@ -27,9 +27,11 @@ export function LoginForm() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await login(loginEmail, loginPassword);
       toast({ title: "Login Successful", description: "Welcome back!" });
@@ -39,22 +41,25 @@ export function LoginForm() {
         title: "Login Failed",
         description: error.message,
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
-      // For now, new users are 'Designers' by default.
-      // A cloud function will set a custom claim on creation.
-      await signup(signupEmail, signupPassword, signupName, 'Designer');
-      toast({ title: "Signup Successful", description: "Welcome!" });
+      await signup(signupEmail, signupPassword, signupName);
+      toast({ title: "Signup Successful", description: "Welcome! Your account is being set up." });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Signup Failed",
         description: error.message,
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -85,7 +90,7 @@ export function LoginForm() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" type="submit">{t('login')}</Button>
+              <Button className="w-full" type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('login')}</Button>
             </CardFooter>
           </Card>
         </form>
@@ -96,7 +101,7 @@ export function LoginForm() {
             <CardHeader>
               <CardTitle className="text-2xl font-headline">{t('signup')}</CardTitle>
                <CardDescription>
-                Create your account to get started.
+                Create your account to get started. New users are 'Designers' by default.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -114,7 +119,7 @@ export function LoginForm() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" type="submit">{t('signup')}</Button>
+              <Button className="w-full" type="submit" disabled={isSubmitting}>{isSubmitting ? t('saving') : t('signup')}</Button>
             </CardFooter>
           </Card>
         </form>
