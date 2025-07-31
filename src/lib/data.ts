@@ -8,7 +8,7 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   avatar: string;
-  status: 'available' | 'busy' | 'on_leave';
+  status: 'Available' | 'Busy' | 'On Leave';
   workplace?: string;
   createdAt: Timestamp;
 };

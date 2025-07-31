@@ -13,8 +13,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Eye, EyeOff } from 'lucide-react';
-import { accounts, Account } from '@/lib/data';
 import { useState } from 'react';
+
+// Mock data has been removed. This component will be updated later to fetch from Firestore.
+const accounts: any[] = [];
 
 export default function AccountsPage() {
   const { user } = useAuth();
@@ -58,7 +60,7 @@ export default function AccountsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {accounts.map((account) => (
+            {accounts.length > 0 ? accounts.map((account) => (
               <TableRow key={account.id}>
                 <TableCell className="font-medium">{account.service}</TableCell>
                 <TableCell>{account.username}</TableCell>
@@ -77,7 +79,13 @@ export default function AccountsPage() {
                     <Button variant="outline" size="sm">{t('edit')}</Button>
                 </TableCell>
               </TableRow>
-            ))}
+            )) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        {t('noData')}
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
