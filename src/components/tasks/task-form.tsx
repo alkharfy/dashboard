@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db, functions } from "@/lib/firebase";
+import { functions } from "@/lib/firebase";
 import { httpsCallable } from 'firebase/functions';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -102,51 +102,34 @@ export function TaskForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: t('admin'), // Using a translated key for title
-            description: "You must be logged in to create a task.",
-        });
-        return;
-    }
     setIsSubmitting(true);
-
     try {
       const createTask = httpsCallable(functions, 'createTask');
-      // The skills are a comma-separated string, let's turn them into an array
       const payload = {
-          ...values,
-          skills: values.skills.split(',').map(s => s.trim()).filter(Boolean),
-          birthdate: values.birthdate ? values.birthdate.toISOString() : null, // Send as ISO string
+        ...values,
+        birthdate: values.birthdate ? values.birthdate.toISOString() : null,
+        skills: values.skills.split(',').map(s => s.trim()).filter(Boolean),
       };
       
-      const result = await createTask(payload);
+      await createTask(payload);
 
       toast({
-          title: lang === 'ar' ? 'تم إنشاء المهمة' : 'Task Created',
-          description: lang === 'ar' ? 'تمت إضافة المهمة الجديدة بنجاح.' : 'The new task has been added successfully.',
+        title: lang === 'ar' ? 'تم إنشاء المهمة' : 'Task Created',
+        description: lang === 'ar' ? 'تمت إضافة المهمة الجديدة بنجاح.' : 'The new task has been added successfully.',
       });
-
       router.push('/all-tasks');
-    } catch (error: any) {
-        console.error("Error creating task: ", error);
-        const title = lang === 'ar' ? 'خطأ' : 'Error';
-        let description = error.message || (lang === 'ar' ? 'حدثت مشكلة أثناء إنشاء المهمة.' : 'There was a problem creating the task.');
-        
-        if (error.code === 'functions/permission-denied') {
-            description = lang === 'ar' ? 'ليس لديك الصلاحية لإنشاء مهمة.' : 'You do not have permission to create a task.';
-        } else if (error.code === 'functions/invalid-argument') {
-            description = `${lang === 'ar' ? 'بيانات غير صالحة: ' : 'Invalid data: '} ${error.message}`;
-        }
 
-        toast({
-            variant: "destructive",
-            title: title,
-            description: description,
-        });
+    } catch (error: any) {
+      console.error("Error creating task:", error);
+      const title = lang === 'ar' ? 'خطأ' : 'Error';
+      const description = error.message || (lang === 'ar' ? 'حدث خطأ ما.' : 'An error occurred.');
+      toast({
+        variant: "destructive",
+        title: title,
+        description: description,
+      });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   }
 
