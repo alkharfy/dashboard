@@ -1,20 +1,32 @@
+import { Timestamp } from 'firebase/firestore';
+
 export type Task = {
     id: string;
     clientName: string;
     services: string[];
-    assignee: string;
+    assignee?: string; // Made optional as it might not be assigned initially
     status: 'Not Started' | 'In Progress' | 'In Review' | 'Completed';
-    date: string;
-    rating: number | null;
+    createdAt: Timestamp;
+    rating?: number | null;
+    // Fields from the form that are now in Firestore
+    birthdate?: Timestamp | null;
+    contactInfo: string;
+    address?: string;
+    jobTitle: string;
+    education: string;
+    experience: number;
+    skills: string;
+    designerNotes?: string;
+    reviewerNotes?: string;
+    paymentStatus: "Paid" | "Unpaid" | "Pending";
+    attachments?: any[];
+    assignedDesignerUid?: string | null;
+    assignedReviewerUid?: string | null;
+    designerRating?: number | null;
+    designerFeedback?: string;
+    reviewerRating?: number | null;
+    reviewerFeedback?: string;
   };
-  
-  export const tasks: Task[] = [
-    { id: '1', clientName: 'Ahmad Al-Farsi', services: ['CV Writing'], assignee: 'Designer User', status: 'Completed', date: '2023-10-26', rating: 5 },
-    { id: '2', clientName: 'Fatima Al-Marzouqi', services: ['Cover Letter', 'LinkedIn Profile'], assignee: 'Designer User', status: 'In Review', date: '2023-10-25', rating: null },
-    { id: '3', clientName: 'Yusuf Al-Hashemi', services: ['CV Writing'], assignee: 'Another Designer', status: 'In Progress', date: '2023-10-24', rating: null },
-    { id: '4', clientName: 'Layla Al-Nuaimi', services: ['LinkedIn Profile'], assignee: 'Designer User', status: 'Not Started', date: '2023-10-27', rating: null },
-    { id: '5', clientName: 'Omar Al-Mansoori', services: ['CV Writing', 'Cover Letter'], assignee: 'Another Designer', status: 'Completed', date: '2023-10-22', rating: 4 },
-  ];
   
   export type Account = {
       id: string;

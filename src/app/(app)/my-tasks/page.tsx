@@ -3,24 +3,47 @@
 import { useAuth } from '@/contexts/auth-context';
 import { useLanguage } from '@/contexts/language-context';
 import { TaskTable } from '@/components/tasks/task-table';
-import { tasks } from '@/lib/data';
-import { useMemo } from 'react';
+import { Task } from '@/lib/data';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function MyTasksPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const myTasks = useMemo(() => {
-    if (!user) return [];
+  useEffect(() => {
+    if (!user) return;
+
+    let q;
     if (user.role === 'Designer') {
-      return tasks.filter((task) => task.assignee === user.name);
+      q = query(collection(db, "tasks"), where("assignedDesignerUid", "==", user.uid));
+    } else if (user.role === 'Reviewer') {
+      q = query(collection(db, "tasks"), where("status", "==", "In Review"));
+    } else {
+        setLoading(false);
+        return;
     }
-    if (user.role === 'Reviewer') {
-      return tasks.filter((task) => task.status === 'In Review');
-    }
-    return [];
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const tasksData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+      setMyTasks(tasksData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user]);
+
+  if (loading) {
+    return (
+       <div className="flex items-center justify-center h-full">
+        <p>Loading tasks...</p>
+      </div>
+    );
+  }
 
   if (!user || (user.role !== 'Designer' && user.role !== 'Reviewer')) {
     return (

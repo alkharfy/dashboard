@@ -64,7 +64,7 @@ export const translations = {
     'inReview': 'In Review',
     'completed': 'Completed',
     'notRatedYet': 'Not rated yet',
-    'noTasksAssigned': '😃 No tasks assigned to you yet.',
+    'noTasksAssigned': '😃 No tasks assigned to you at the moment. Great job!',
 
     // New Task Form
     'createNewTask': 'Create a New Task',
@@ -186,7 +186,7 @@ export const translations = {
     'inReview': 'قيد المراجعة',
     'completed': 'مكتملة',
     'notRatedYet': 'لم يُقيّم بعد',
-    'noTasksAssigned': '😃 لا توجد مهام في الوقت الحالي.',
+    'noTasksAssigned': '😃 لا توجد مهام مسندة إليك في الوقت الحالي. عمل رائع!',
 
     // New Task Form
     'createNewTask': 'إنشاء مهمة جديدة',

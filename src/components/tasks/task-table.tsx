@@ -33,6 +33,7 @@ import { useLanguage } from '@/contexts/language-context';
 import type { UserRole } from '@/contexts/auth-context';
 import { StarRating } from '@/components/shared/star-rating';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { format } from 'date-fns';
 
 type TaskTableProps = {
   tasks: Task[];
@@ -117,11 +118,11 @@ export function TaskTable({ tasks, userRole }: TaskTableProps) {
               <TableRow key={task.id}>
                 <TableCell className="font-medium">{task.clientName}</TableCell>
                 <TableCell>{task.services.join(', ')}</TableCell>
-                {showAssignee && <TableCell>{task.assignee}</TableCell>}
+                {showAssignee && <TableCell>{task.assignee || 'Unassigned'}</TableCell>}
                 <TableCell>
                   <Badge variant={statusVariants[task.status]}>{statusTranslations[task.status]}</Badge>
                 </TableCell>
-                <TableCell>{task.date}</TableCell>
+                <TableCell>{task.createdAt ? format(task.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A'}</TableCell>
                 <TableCell>
                   {task.rating ? <StarRating value={task.rating} readOnly /> : <span className="text-muted-foreground">{t('notRatedYet')}</span>}
                 </TableCell>
