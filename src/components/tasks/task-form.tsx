@@ -107,6 +107,7 @@ export function TaskForm() {
     try {
         await addDoc(collection(db, 'tasks'), {
             ...values,
+            birthdate: values.birthdate || null,
             status: 'Not Started',
             createdAt: serverTimestamp(),
             assignedDesignerUid: null, // Or assign a default designer
