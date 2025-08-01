@@ -1,33 +1,72 @@
 rules_version = '2';
+
 service cloud.firestore {
-  match /databases/{db}/documents {
-    function isRole(r) { 
-      return request.auth.token.role == r; 
+  match /databases/{database}/documents {
+
+    // Helper functions to make rules more readable
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    match /users/{uid} {
-      allow read, update: if request.auth.uid == uid || isRole('Admin');
-      allow create: if isRole('Admin'); // Or allow on signup
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
-    match /tasks/{tid} {
-      allow create: if isRole('Admin') || isRole('Manager');
+    function hasRole(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+
+    function isOneOfRoles(roles) {
+      return isSignedIn() && request.auth.token.role in roles;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Admins and Managers can read any user profile. Users can read their own.
+      allow read: if isOneOfRoles(['Admin', 'Manager']) || isUser(userId);
       
-      allow read:   if isRole('Admin') 
-                    || isRole('Manager')
-                    || (resource.data.assignedDesignerUid != null && resource.data.assignedDesignerUid == request.auth.uid)
-                    || (resource.data.assignedReviewerUid != null && resource.data.assignedReviewerUid == request.auth.uid);
-                    
-      allow update: if isRole('Admin')
-                    || (isRole('Designer') && resource.data.assignedDesignerUid == request.auth.uid)
-                    || (isRole('Reviewer') && resource.data.assignedReviewerUid == request.auth.uid);
+      // Users can only update their own profile.
+      allow update: if isUser(userId);
 
-      allow delete: if isRole('Admin');
+      // No one can create or delete user documents directly. This is handled by backend functions.
+      allow create, delete: if false;
     }
 
-    match /accounts/{id} {
-      allow read:  if isRole('Admin') || isRole('Manager');
-      allow write: if isRole('Admin');
+    // Rules for the 'tasks' collection
+    match /tasks/{taskId} {
+      // Admins and Managers can read all tasks.
+      // Designers and Reviewers can only read tasks they are assigned to.
+      allow read: if isOneOfRoles(['Admin', 'Manager'])
+                   || (hasRole('Designer') && resource.data.designerId == request.auth.uid)
+                   || (hasRole('Reviewer') && resource.data.status == 'in_review');
+
+      // Only Admins and Managers can create new tasks.
+      allow create: if isOneOfRoles(['Admin', 'Manager']);
+
+      // Admins can update any task.
+      // Designers can update tasks assigned to them.
+      // Reviewers can update tasks assigned to them.
+      allow update: if hasRole('Admin')
+                   || (hasRole('Designer') && resource.data.designerId == request.auth.uid)
+                   || (hasRole('Reviewer') && resource.data.status == 'in_review');
+
+      // Only Admins can delete tasks.
+      allow delete: if hasRole('Admin');
+    }
+
+    // Rules for the 'accounts' collection
+    match /accounts/{accountId} {
+      // Only Admins can read, create, update, or delete external service accounts.
+      allow read, write: if hasRole('Admin');
+    }
+
+    // Rules for the 'stats' collection
+    match /stats/{statId} {
+      // Any authenticated user can read stats (for the dashboard).
+      allow read: if isSignedIn();
+      
+      // Only the backend (via an admin-privileged function) can write to stats.
+      allow write: if hasRole('Admin');
     }
   }
 }
